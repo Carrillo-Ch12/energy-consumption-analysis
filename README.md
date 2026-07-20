@@ -1,77 +1,77 @@
-# Análisis empírico MongoDB vs. Apache Hive — Diseño físico, rendimiento y consumo energético
+# Empirical Analysis MongoDB vs. Apache Hive — Physical Design, Performance and Energy Consumption
 
-Notebook de análisis de datos del estudio experimental que compara **MongoDB 8.0.17** (NoSQL documental) y **Apache Hive 3.1.3** (data warehouse sobre Hadoop) bajo el benchmark **TPC-H (SF = 5 GB)**, midiendo **tiempo de ejecución** y **consumo energético** (vía Scaphandre / Intel RAPL) para cuatro configuraciones de diseño físico (*baseline*, índices, compresión Snappy e índices + compresión) en modalidades de despliegue **distribuida** y **centralizada**.
+Data-analysis notebook for the experimental study comparing **MongoDB 8.0.17** (document-oriented NoSQL) and **Apache Hive 3.1.3** (data warehouse on Hadoop) under the **TPC-H benchmark (SF = 5 GB)**, measuring **execution time** and **energy consumption** (via Scaphandre / Intel RAPL) for four physical-design configurations (*baseline*, indexes, Snappy compression, and indexes + compression) in **distributed** and **centralized** deployment modes.
 
-Este repositorio contiene el cuaderno (`Mongo_Hive.ipynb`) que carga las métricas crudas, las depura, calcula estadísticos y pruebas inferenciales, y genera todas las figuras del informe de tesis.
+This repository contains the notebook (`Mongo_Hive.ipynb`) that loads the raw metrics, cleans them, computes statistics and inferential tests, and generates all the figures of the thesis report.
 
-## Qué hace el notebook
+## What the notebook does
 
-A partir de las métricas recolectadas en los experimentos (CSV de potencia y tiempo por consulta, configuración, iteración y nodo), el cuaderno:
+From the metrics collected in the experiments (power and time CSVs per query, configuration, iteration and node), the notebook:
 
-- Carga y valida los datos (QA), descartando archivos incompletos.
-- Calcula la energía por **integración trapezoidal** sobre la serie de potencia.
-- Aplica el **cap proporcional a 3 horas** (10 800 s) para tratar los *timeouts* como observaciones censuradas.
-- Agrega en dos niveles: promedio por consulta (Q1–Q22) y mediana entre consultas por configuración.
-- Ejecuta **correlación de Spearman** (tiempo–energía) y **test de Wilcoxon pareado** con corrección **Holm–Bonferroni** (α = 0,05).
-- Construye el **ranking de configuraciones** por victorias/derrotas significativas.
-- Genera las visualizaciones: barras por consulta (escala log), comparativos distribuido vs. centralizado, dispersión tiempo–energía, distribución de carga por nodo/shard, mapas de calor y gráficos radar.
+- Loads and validates the data (QA), discarding incomplete files.
+- Computes energy by **trapezoidal integration** over the power series.
+- Applies the **3-hour proportional cap** (10,800 s) to treat *timeouts* as censored observations.
+- Aggregates on two levels: mean per query (Q1–Q22) and median across queries per configuration.
+- Runs **Spearman correlation** (time–energy) and a **paired Wilcoxon test** with **Holm–Bonferroni** correction (α = 0.05).
+- Builds the **ranking of configurations** by significant wins/losses.
+- Generates the visualizations: per-query bar charts (log scale), distributed vs. centralized comparisons, time–energy scatter plots, per-node/shard load distribution, heatmaps and radar charts.
 
-## Estructura del cuaderno
+## Notebook structure
 
-1. **Setup** — clona automáticamente los 4 repositorios de datos.
-2. **Imports y configuración global** — librerías y constantes (timeout, escenarios, patrón de CSV).
-3. **Funciones auxiliares** — helpers para Hive (3.1) y MongoDB (3.2).
-4. **Análisis Hive** — carga y QA (4.1); estadísticas y tablas (4.2).
-5. **Análisis Mongo** — carga y QA (5.1); estadísticas y tablas (5.2).
-6. **Gráficos Hive**.
-7. **Gráficos Mongo**.
-8. **Test de Wilcoxon — Hive**.
-9. **Test de Wilcoxon — Mongo**.
-10. **Radar charts** — comparación multidimensional (5 ejes normalizados).
-11. **Radar por consulta** — tiempo de ejecución en 22 ejes (variantes 11.b–11.d).
+1. **Setup** — automatically clones the 4 data repositories.
+2. **Imports and global configuration** — libraries and constants (timeout, scenarios, CSV pattern).
+3. **Helper functions** — helpers for Hive (3.1) and MongoDB (3.2).
+4. **Hive analysis** — loading and QA (4.1); statistics and tables (4.2).
+5. **Mongo analysis** — loading and QA (5.1); statistics and tables (5.2).
+6. **Hive charts**.
+7. **Mongo charts**.
+8. **Wilcoxon test — Hive**.
+9. **Wilcoxon test — Mongo**.
+10. **Radar charts** — multidimensional comparison (5 normalized axes).
+11. **Per-query radar** — execution time on 22 axes (variants 11.b–11.d).
 
-Convención de sufijos: `_H` = Hive · `_M` = MongoDB.
+Suffix convention: `_H` = Hive · `_M` = MongoDB.
 
-## Datos
+## Data
 
-La primera celda (**Setup**) clona los cuatro repositorios con las métricas crudas en la carpeta del notebook, así que no es necesario descargarlos a mano:
+The first cell (**Setup**) clones the four repositories with the raw metrics into the notebook folder, so there is no need to download them manually:
 
-| Motor | Modalidad | Repositorio |
-|---|---|---|
-| Apache Hive | Distribuido  | https://github.com/Carrillo-Ch12/Hive_metricas_new_5G |
-| Apache Hive | Centralizado | https://github.com/Carrillo-Ch12/5g_hive_centralizado |
-| MongoDB     | Distribuido  | https://github.com/Carrillo-Ch12/Metricas_5g |
-| MongoDB     | Centralizado | https://github.com/Carrillo-Ch12/Mongo_centralizado_5G |
+| Engine      | Mode        | Repository                                               |
+| ----------- | ----------- | -------------------------------------------------------- |
+| Apache Hive | Distributed | <https://github.com/Carrillo-Ch12/Hive_metricas_new_5G>  |
+| Apache Hive | Centralized | <https://github.com/Carrillo-Ch12/5g_hive_centralizado>  |
+| MongoDB     | Distributed | <https://github.com/Carrillo-Ch12/Metricas_5g>           |
+| MongoDB     | Centralized | <https://github.com/Carrillo-Ch12/Mongo_centralizado_5G> |
 
-Cada CSV contiene, entre otras, las columnas `row_type`, `iteration`, `elapsed_seconds` y `power_total_watts`.
+Each CSV contains, among others, the columns `row_type`, `iteration`, `elapsed_seconds` and `power_total_watts`.
 
-## Requisitos
+## Requirements
 
-- Python 3.10 o superior
-- `git` disponible en el `PATH` (lo usa la celda de Setup)
-- Paquetes: `numpy`, `pandas`, `matplotlib`, `seaborn`, `scipy`, `jupyter`
+- Python 3.10 or higher
+- `git` available on the `PATH` (used by the Setup cell)
+- Packages: `numpy`, `pandas`, `matplotlib`, `seaborn`, `scipy`, `jupyter`
 
-Instalación rápida:
+Quick install:
 
-```bash
+```
 pip install numpy pandas matplotlib seaborn scipy jupyter
 ```
 
-## Cómo ejecutar
+## How to run
 
-```bash
-git clone <URL-de-este-repositorio>
+```
+git clone <URL-of-this-repository>
 cd Mongo-Hive-Analisis
 pip install numpy pandas matplotlib seaborn scipy jupyter
 jupyter notebook Mongo_Hive.ipynb
 ```
 
-Ejecuta las celdas en orden (la celda de Setup clona los datos en la primera corrida). El notebook se publica **sin salidas** para mantenerlo liviano; las figuras y tablas se regeneran al ejecutarlo de principio a fin.
+Run the cells in order (the Setup cell clones the data on the first run). The notebook is published **without outputs** to keep it lightweight; the figures and tables are regenerated when it is run from start to finish.
 
-## Salidas generadas
+## Generated outputs
 
-Al ejecutarse, el cuaderno produce las figuras usadas en el informe, entre ellas los gráficos de barras de tiempo y energía por consulta, los comparativos distribuido vs. centralizado, los diagramas de dispersión tiempo–energía, los mapas de calor y los gráficos radar (multidimensional y por consulta).
+When executed, the notebook produces the figures used in the report, among them the per-query time and energy bar charts, the distributed vs. centralized comparisons, the time–energy scatter plots, the heatmaps and the radar charts (multidimensional and per-query).
 
-## Relación con la tesis
+## Relationship to the thesis
 
-Este cuaderno es el soporte reproducible del capítulo de **Resultados** del trabajo *"Estudio Empírico del Diseño Físico de Bases de Datos y su Impacto en la Eficiencia y el Consumo Energético"*. Las medianas, rankings de Wilcoxon y correlaciones de Spearman reportados en el informe se obtienen directamente de la ejecución de este notebook.
+This notebook is the reproducible backbone of the **Results** chapter of the work *"Empirical Study of Physical Database Design and its Impact on Efficiency and Energy Consumption"*. The medians, Wilcoxon rankings and Spearman correlations reported in the paper are obtained directly from running this notebook.
