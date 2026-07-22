@@ -74,4 +74,4 @@ When executed, the notebook produces the figures used in the report, among them 
 
 ## Relationship to the thesis
 
-This notebook is the reproducible backbone of the **Results** chapter of the work *"Empirical Study of Physical Database Design and its Impact on Efficiency and Energy Consumption"*. The medians, Wilcoxon rankings and Spearman correlations reported in the paper are obtained directly from running this notebook.
+This notebook is the reproducible backbone of the **Results** chapter of the work *"Empirical Study of Physical Database Design and its Impact on Efficiency and Energy Consumption"*. The means, Wilcoxon rankings and Spearman correlations reported in the paper are obtained directly from running this notebook.
